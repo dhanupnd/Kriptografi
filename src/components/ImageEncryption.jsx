@@ -215,11 +215,43 @@ const HistogramChart = ({ data, title }) => {
     };
     const options = {
       responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1' } }, title: { display: false } },
-      scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }, y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } } }
+      maintainAspectRatio: false, // Penting agar bisa stretch vertikal/horizontal
+      animation: false, // Optional: Matikan animasi biar resize lebih cepat/ringan
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: { 
+        legend: { 
+          position: 'bottom', 
+          labels: { color: '#cbd5e1', boxWidth: 10, padding: 20 } // Styling label
+        }, 
+        title: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          titleColor: '#fff',
+          bodyColor: '#cbd5e1',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1
+        }
+      },
+      scales: { 
+        x: { 
+          ticks: { color: '#64748b', maxTicksLimit: 8 }, // Limit tick agar tidak numpuk di mobile
+          grid: { color: '#334155', drawBorder: false } 
+        }, 
+        y: { 
+          ticks: { color: '#64748b', callback: (val) => val >= 1000 ? `${val/1000}k` : val }, // Format angka besar
+          grid: { color: '#334155', drawBorder: false },
+          beginAtZero: true
+        } 
+      }
     };
-    return <div className="h-64 w-full"><Line data={chartData} options={options} /></div>;
+    return (
+      <div className="relative w-full h-[200px] sm:h-[250px] md:h-[300px]">
+        <Line data={chartData} options={options} />
+      </div>
+    );
   };
 
 // ==========================================
@@ -229,7 +261,7 @@ const HistogramChart = ({ data, title }) => {
 export default function ImageEncryption() {
   const defaultKeyHex = "2b7e151628aed2a6abf7158809cf4f3c";
   const [keyHex, setKeyHex] = useState(defaultKeyHex);
-  const [selectedSboxId, setSelectedSboxId] = useState(1);
+  const [selectedSboxId, setSelectedSboxId] = useState(44);
   
   // Encryption States
   const [originalImage, setOriginalImage] = useState(null);
@@ -353,16 +385,28 @@ export default function ImageEncryption() {
     <div className="space-y-8 pb-20">
       {/* Settings Panel */}
       <div className="bg-white/5 backdrop-blur-md rounded-2xl shadow-xl p-6 border border-white/10">
-        <h2 className="text-xl font-bold text-white mb-4">Configuration</h2>
+        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+          Configuration
+        </h2>
         <div className="flex flex-wrap gap-2 mb-4">
           {SBOX_OPTIONS.map((opt) => (
             <button key={opt.id} onClick={() => setSelectedSboxId(opt.id)}
-              className={`px-4 py-2 rounded text-sm font-bold transition-all ${selectedSboxId === opt.id ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' : 'bg-slate-700 text-gray-300 hover:bg-slate-600'}`}>
-              {opt.name}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all transform hover:scale-105 active:scale-95 ${selectedSboxId === opt.id ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30' : 'bg-slate-700/50 text-gray-300 hover:bg-slate-700'}`}>
+              <div className="flex items-center gap-2">
+                  {selectedSboxId === opt.id && (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                  {opt.name}
+                </div>
             </button>
           ))}
         </div>
-        <input className="w-full p-3 rounded bg-slate-800 text-white border border-purple-500/30 focus:border-purple-500 outline-none"
+        <input className="w-full p-3 rounded bg-slate-800/50 text-white border border-purple-500/30 focus:border-purple-500 outline-none"
           value={keyHex} onChange={(e) => setKeyHex(e.target.value.trim())} placeholder="Key (32 hex chars)" />
       </div>
 
@@ -373,7 +417,7 @@ export default function ImageEncryption() {
           <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
             <span className="text-green-400">🔒</span> Encryption
           </h2>
-          <input type="file" accept="image/*" onChange={handleImageSelect} className="mb-4 w-full text-sm text-gray-300 file:bg-green-600 file:border-0 file:rounded file:px-4 file:py-2 file:text-white hover:file:bg-green-700 cursor-pointer" />
+          <input type="file" accept="image/*" onChange={handleImageSelect} className="mb-4 w-full text-sm text-gray-300 file:bg-purple-600 file:border-0 file:rounded file:px-4 file:py-2 file:text-white hover:file:bg-purple-700 cursor-pointer" />
           
           <div className="grid grid-cols-2 gap-4 mb-4 min-h-[160px]">
             <div className="bg-slate-800/50 rounded-lg p-2 border border-white/5 flex flex-col items-center justify-center">
@@ -390,9 +434,9 @@ export default function ImageEncryption() {
             </div>
           </div>
 
-          <button onClick={handleEncryptImage} className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 rounded-lg text-white font-bold mb-3 shadow-lg shadow-green-500/20 transition-all">Encrypt & Analyze</button>
+          <button onClick={handleEncryptImage} className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 rounded-lg text-white font-bold mb-3 shadow-lg shadow-purple-500/20 transition-all">Encrypt & Analyze</button>
           {encryptedImageBlob && (
-            <button onClick={handleDownloadEncrypted} className="w-full py-2 bg-slate-700 hover:bg-slate-600 rounded text-blue-300 font-medium text-sm border border-blue-500/30">Download Encrypted PNG</button>
+            <button onClick={handleDownloadEncrypted} className="w-full py-2 bg-slate-700 hover:bg-slate-600 rounded text-purple-300 font-medium text-sm border border-purple-500/30">Download Encrypted PNG</button>
           )}
         </div>
 
@@ -411,7 +455,7 @@ export default function ImageEncryption() {
 
           <button onClick={handleDecryptImage} className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 rounded-lg text-white font-bold mb-3 shadow-lg shadow-blue-500/20 transition-all">Decrypt Image</button>
           {decryptedImage && (
-             <button onClick={handleDownloadDecrypted} className="w-full py-2 bg-slate-700 hover:bg-slate-600 rounded text-green-300 font-medium text-sm border border-green-500/30">Download Result</button>
+             <button onClick={handleDownloadDecrypted} className="w-full py-2 bg-slate-700 hover:bg-slate-600 rounded text-blue-300 font-medium text-sm border border-blue-500/30">Download Result</button>
           )}
         </div>
       </div>

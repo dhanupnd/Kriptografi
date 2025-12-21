@@ -6,10 +6,10 @@ import { runSboxAnalysis } from "../services/sboxService.js";
 const TextEncryption = () => {
   const defaultKeyHex = "2b7e151628aed2a6abf7158809cf4f3c";
   const [keyHex, setKeyHex] = useState(defaultKeyHex);
-  const [plaintext, setPlaintext] = useState("Bujang Inam!");
+  const [plaintext, setPlaintext] = useState("TI23 Solid Solid Solid!");
   const [cipherHex, setCipherHex] = useState("");
   const [decrypted, setDecrypted] = useState("");
-  const [selectedSboxId, setSelectedSboxId] = useState(1);
+  const [selectedSboxId, setSelectedSboxId] = useState(44);
   
   // State untuk analisis S-Box
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -243,7 +243,7 @@ const TextEncryption = () => {
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm text-green-300 mb-2 font-medium">Plaintext</label>
+          <label className="block text-sm text-blue-300 mb-2 font-medium">Plaintext</label>
           <textarea
             className="w-full p-3 rounded-lg bg-slate-800/50 text-white border border-green-500/30"
             rows={4}
@@ -253,10 +253,10 @@ const TextEncryption = () => {
         </div>
 
         <div className="flex gap-4 mb-6">
-          <button onClick={handleEncrypt} className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold shadow-lg">
+          <button onClick={handleEncrypt} className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-colors duration-300 text-white font-bold shadow-lg">
             Encrypt
           </button>
-          <button onClick={handleDecrypt} className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold shadow-lg">
+          <button onClick={handleDecrypt} className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 transition-colors duration-300 text-white font-bold shadow-lg">
             Decrypt
           </button>
         </div>
