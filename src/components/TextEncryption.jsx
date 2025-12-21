@@ -6,7 +6,7 @@ import { runSboxAnalysis } from "../services/sboxService.js";
 const TextEncryption = () => {
   const defaultKeyHex = "2b7e151628aed2a6abf7158809cf4f3c";
   const [keyHex, setKeyHex] = useState(defaultKeyHex);
-  const [plaintext, setPlaintext] = useState("TI23 Solid Solid Solid!");
+  const [plaintext, setPlaintext] = useState("");
   const [cipherHex, setCipherHex] = useState("");
   const [decrypted, setDecrypted] = useState("");
   const [selectedSboxId, setSelectedSboxId] = useState(44);
