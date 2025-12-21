@@ -139,6 +139,53 @@ export const runSboxAnalysis = (sbox) => {
     }
     const to = maxTO / 256;
 
+    // 9. Correlation Immunity (CI)
+    let minCI = 8;
+    for (let bit = 0; bit < 8; bit++) {
+        // Ambil bit ke-i dari setiap elemen S-Box
+        let f = [];
+        for (let x = 0; x < 256; x++) {
+            f.push(((sbox[x] >> bit) & 1) === 0 ? 1 : -1);
+        }
+
+        // Hitung spektrum Walsh menggunakan FWHT
+        let wht = fwht(f);
+        
+        let currentBitCI = 8;
+        // Periksa mask dari bobot 1 sampai 8
+        // Mask 0 diabaikan karena merupakan total bias (balance)
+        for (let mask = 1; mask < 256; mask++) {
+            if (wht[mask] !== 0) {
+                // Jika korelasi ditemukan, CI adalah bobot mask tersebut - 1
+                let weight = getHammingWeight(mask);
+                currentBitCI = Math.min(currentBitCI, weight - 1);
+            }
+        }
+        minCI = Math.min(minCI, currentBitCI);
+    }
+    const ci = minCI;
+
+    // 10. Differential Uniformity (DU)
+    let maxUniformity = 0;
+    // Inisialisasi DDT (Differential Distribution Table)
+    const ddt = Array.from({ length: 256 }, () => new Uint8Array(256));
+
+    for (let dx = 0; dx < 256; dx++) {
+        for (let x = 0; x < 256; x++) {
+            let dy = sbox[x] ^ sbox[x ^ dx];
+            ddt[dx][dy]++;
+        }
+    }
+
+    // Mencari nilai maksimum di DDT (mengabaikan dx=0)
+    for (let dx = 1; dx < 256; dx++) {
+        for (let dy = 0; dy < 256; dy++) {
+            if (ddt[dx][dy] > maxUniformity) {
+                maxUniformity = ddt[dx][dy];
+            }
+        }
+    }
+
     return {
         nonLinearity: Math.min(...results.nonlinearity),
         sac: results.sac.reduce((a, b) => a + b, 0) / results.sac.length,
@@ -148,6 +195,7 @@ export const runSboxAnalysis = (sbox) => {
         dap: dap,
         ad: maxDeg,
         to: to,
-        ci: 0 // Correlation Immunity biasanya memerlukan analisis Walsh mendalam per bit
+        ci: minCI, // Correlation Immunity biasanya memerlukan analisis Walsh mendalam per bit
+        du: maxUniformity
     };
 };

@@ -19,6 +19,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6 relative overflow-hidden">
+    
       
       {/* --- Background Animations (Tetap di sini) --- */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">

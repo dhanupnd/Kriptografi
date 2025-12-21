@@ -163,6 +163,23 @@ const TextEncryption = () => {
                     <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Trans. Order (TO)</p>
                     <p className="text-2xl font-mono text-cyan-400">{(analysisResult.to || 0).toFixed(4)}</p>
                 </div>
+
+                 {/* 9. Correlation Immunity (CI) */}
+                 <div className="bg-slate-900/60 p-3 rounded-lg border border-purple-500/20 shadow-inner">
+                    <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Corr. Immunity (CI)</p>
+                    <p className="text-2xl font-mono text-cyan-400">{(analysisResult.ci || 0)}</p>
+                </div>
+
+                {/* 10. Differential Uniformity (DU) */}
+                <div className="bg-slate-900/60 p-3 rounded-lg border border-red-500/20 shadow-inner">
+                    <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Diff. Uniformity (DU)</p>
+                    <div className="flex items-baseline gap-2">
+                        <p className="text-2xl font-mono text-orange-400">{(analysisResult.du || 0)}</p>
+                        <span className="text-[10px] text-gray-500">
+                            {analysisResult.du <= 4 ? "(Excellent)" : analysisResult.du <= 8 ? "(Good)" : "(Weak)"}
+                        </span>
+                    </div>
+                </div>
             </div>
 
             {/* Footer Info */}
