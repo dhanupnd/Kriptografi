@@ -1,5 +1,6 @@
 // src/TextEncryption.jsx
 import React, { useState } from "react";
+import * as XLSX from "xlsx";
 import { encryptTextToHex, decryptHexToText, SBOX_OPTIONS, getSboxById } from "../cryptoAlgorithm/aesCustom.js";
 import { runSboxAnalysis } from "../services/sboxService.js";
 
@@ -12,11 +13,13 @@ const TextEncryption = () => {
   const [selectedSboxId, setSelectedSboxId] = useState(44);
   
   // State untuk analisis S-Box
+  const [customSbox, setCustomSbox] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleEncrypt = () => {
     try {
+      const sboxToUse = selectedSboxId === "custom" ? customSbox : selectedSboxId;
       const ct = encryptTextToHex(plaintext, keyHex, selectedSboxId);
       setCipherHex(ct);
       setDecrypted("");
@@ -27,6 +30,7 @@ const TextEncryption = () => {
 
   const handleDecrypt = () => {
     try {
+      const sboxToUse = selectedSboxId === "custom" ? customSbox : selectedSboxId;
       const pt = decryptHexToText(cipherHex, keyHex, selectedSboxId);
       setDecrypted(pt);
     } catch (e) {
@@ -34,15 +38,90 @@ const TextEncryption = () => {
     }
   };
 
+  // --- FUNGSI UPLOAD FILE EXCEL ---
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target.result;
+      const wb = XLSX.read(bstr, { type: "binary" });
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+      
+      // Mengonversi excel ke array mentah
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      
+      // Meratakan array 2D menjadi 1D dan membersihkan nilai non-numeric
+      const flatData = data.flat()
+      .filter(v => v !== null && v !== "")
+      .map(v => {
+        // Jika input string seperti "0xAB" atau "FF", parse sebagai hex
+        if (typeof v === 'string') {
+          const cleaned = v.trim();
+         // return cleaned.startsWith('0x') ? parseInt(cleaned, 16) : parseInt(cleaned, 16);
+         return parseInt(cleaned, 16);
+        }
+        return parseInt(v.toString(), 16);
+        return Number(v);
+      });
+      console.log("3 Data Pertama (Desimal):", flatData.slice(0, 3));
+// Jika hasilnya [99, 109, 34], maka analisis S-Box 44 akan BERHASIL dan SAMA.
+
+      if (flatData.length < 256) {
+        alert(`Error: File Excel harus berisi minimal 256 angka. Ditemukan: ${flatData.length}`);
+        return;
+      }
+
+      const extractedSbox = flatData.slice(0, 256);
+      setCustomSbox(extractedSbox);
+      setSelectedSboxId("custom"); // Set mode ke custom
+      alert("Custom S-Box uploaded successfully!");
+    };
+    reader.readAsBinaryString(file);
+  };
+
   const handleAnalyzeSbox = (id, name) => {
     setIsAnalyzing(true);
     setTimeout(() => {
-      const sboxData = getSboxById(id);
+      const sboxData = id === "custom" ? customSbox : getSboxById(id);
+      if (!sboxData) {
+        alert("No S-Box data found!");
+        setIsAnalyzing(false);
+        return;
+      }
+      console.log("Data to Analyze:", sboxData)
       const results = runSboxAnalysis(sboxData);
       setAnalysisResult({ ...results, name });
       setIsAnalyzing(false);
     }, 100);
   };
+
+  const renderSboxTable = (name, sbox, isSelected) => (
+    <div key={name} className={`bg-slate-800/50 rounded-xl p-4 border transition-all ${isSelected ? 'border-purple-500 shadow-lg shadow-purple-500/20' : 'border-slate-700/50'}`}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold text-white uppercase">{name}</h3>
+        {isSelected && <span className="px-2 py-0.5 text-[10px] font-bold bg-purple-500/20 text-purple-300 rounded">ACTIVE</span>}
+      </div>
+      <div className="grid grid-cols-17 gap-0.5">
+        <div className=""></div>
+        {[...Array(16)].map((_, i) => (
+          <div key={i} className="text-[9px] font-mono text-gray-500 text-center">{i.toString(16).toUpperCase()}</div>
+        ))}
+        {[...Array(16)].map((_, rowIndex) => (
+          <React.Fragment key={rowIndex}>
+            <div className="text-[9px] font-mono text-gray-500 flex items-center justify-center">{rowIndex.toString(16).toUpperCase()}</div>
+            {sbox.slice(rowIndex * 16, (rowIndex + 1) * 16).map((val, colIndex) => (
+              <div key={colIndex} className={`text-[10px] font-mono text-center py-0.5 rounded ${isSelected ? 'bg-purple-500/20 text-purple-200' : 'bg-slate-700/30 text-gray-400'}`}>
+                {val.toString(16).padStart(2, '0').toUpperCase()}
+              </div>
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -55,46 +134,88 @@ const TextEncryption = () => {
           Select S-Box for Encryption/Decryption
         </h2>
         
-        <div className="flex flex-wrap gap-3">
-          {SBOX_OPTIONS.map((option) => (
-            <div key={option.id} className="flex flex-col gap-2">
+        <div className="flex flex-col md:flex-row gap-6">
+        {/* Kolom Kiri: S-Box Bawaan */}
+        <div className="flex-1">
+          <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-3 font-bold">Predefined S-Boxes</p>
+          <div className="flex flex-wrap gap-3">
+            {SBOX_OPTIONS.map((option) => (
               <button
-                onClick={() => setSelectedSboxId(option.id)}
-                className={`px-6 py-3 rounded-lg font-semibold transition-all transform hover:scale-105 active:scale-95 ${
+                key={option.id}
+                onClick={() => {
+                  setSelectedSboxId(option.id);
+                  // Jangan reset customSbox agar user bisa berpindah-pindah
+                }}
+                className={`px-5 py-2.5 rounded-lg font-semibold transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2 ${
                   selectedSboxId === option.id
                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30'
                     : 'bg-slate-700/50 text-gray-300 hover:bg-slate-700'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  {selectedSboxId === option.id && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {option.name}
-                </div>
+                {selectedSboxId === option.id && (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {option.name}
               </button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        {/* Tombol Analisis berdasarkan S-Box yang dipilih saat ini */}
-        <div className="flex justify-center w-full mt-4"> 
-            <button 
-              onClick={() => {
-                 const currentOption = SBOX_OPTIONS.find(o => o.id === selectedSboxId);
-                 if(currentOption) handleAnalyzeSbox(currentOption.id, currentOption.name);
-              }}
-              disabled={isAnalyzing}
-              className="px-4 py-2 bg-cyan-950/50 border border-cyan-500/30 rounded-lg 
-                        text-[10px] uppercase tracking-wider font-bold text-cyan-400 
-                        hover:bg-cyan-900/50 hover:text-cyan-300 hover:border-cyan-400/50
-                        transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isAnalyzing ? "Analyzing..." : `Analyze S-Box ${selectedSboxId} Result`}
-            </button>
+        {/* Kolom Kanan: Upload Custom S-Box */}
+        <div className="md:w-1/3 border-l border-white/10 pl-0 md:pl-6">
+          <p className="text-[10px] text-cyan-400 uppercase tracking-widest mb-3 font-bold">External Source</p>
+          <div className="flex flex-col gap-3">
+            <label className="group cursor-pointer bg-cyan-500/5 border-2 border-dashed border-cyan-500/20 hover:border-cyan-400/50 rounded-xl p-4 text-center transition-all">
+              <span className="text-xs text-cyan-300 font-medium group-hover:text-cyan-200">
+                {customSbox ? "✅ File Loaded" : "Upload S-Box (Excel)"}
+              </span>
+              <input 
+                type="file" 
+                className="hidden" 
+                accept=".xlsx, .xls" 
+                onChange={handleFileUpload} 
+              />
+            </label>
+            
+            {customSbox && (
+              <button
+                onClick={() => setSelectedSboxId("custom")}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  selectedSboxId === "custom"
+                    ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/40'
+                    : 'bg-slate-800 text-cyan-400 border border-cyan-500/30'
+                }`}
+              >
+                USE CUSTOM S-BOX
+              </button>
+            )}
+          </div>
         </div>
+      </div>
+
+        {/* Tombol Analisis Dinamis */}
+      <div className="flex justify-center w-full mt-8"> 
+          <button 
+            onClick={() => {
+                if (selectedSboxId === "custom") {
+                  handleAnalyzeSbox("custom", "Custom Uploaded S-Box");
+                } else {
+                  const currentOption = SBOX_OPTIONS.find(o => o.id === selectedSboxId);
+                  if(currentOption) handleAnalyzeSbox(currentOption.id, currentOption.name);
+                }
+            }}
+            disabled={isAnalyzing || (selectedSboxId === "custom" && !customSbox)}
+            className="px-6 py-2.5 bg-cyan-950/50 border border-cyan-500/30 rounded-lg 
+                      text-[11px] uppercase tracking-widest font-black text-cyan-400 
+                      hover:bg-cyan-900/50 hover:text-cyan-300 hover:border-cyan-400/50
+                      transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed
+                      shadow-xl shadow-cyan-950/20"
+          >
+            {isAnalyzing ? "Processing Analysis..." : `Analyze ${selectedSboxId === "custom" ? "Custom" : "S-Box " + selectedSboxId} Metrics`}
+          </button>
+      </div>
 
         {/* Panel Hasil Analisis */}
         {analysisResult && (

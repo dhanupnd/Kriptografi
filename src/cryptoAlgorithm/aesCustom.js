@@ -113,6 +113,9 @@ export const SBOX_OPTIONS = [
 
 // Function to get S-Box by ID
 export function getSboxById(id) {
+  if (Array.isArray(id)) {
+    return id;
+  }
   const option = SBOX_OPTIONS.find(opt => opt.id === id);
   return option ? option.sbox : SBOX1; // default to SBOX1 if not found
 }
